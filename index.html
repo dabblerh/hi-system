@@ -245,6 +245,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
 
+/* MOBILE */
+@media (max-width:680px){
+  body{font-size:13px}
+  /* Header */
+  .hd{padding:0 10px;gap:8px}
+  .logo{letter-spacing:.2em;font-size:12px}
+  #hdExport,#hdImport,#userInfo,.hd-date{display:none!important}
+  /* Auth gate */
+  .auth-card{width:calc(100% - 32px)}
+  /* Planner: hide task panel */
+  .tp{display:none}
+  .ca{min-width:0;width:100%}
+  .cch-sub{display:none}
+  .cch{font-size:9px;padding:5px 2px}
+  .cdsp{font-size:12px}
+  /* Routine: single column */
+  .rl{grid-template-columns:1fr;overflow-y:auto}
+  .rsb{border-left:none;border-top:1px solid var(--bd)}
+  .rddate{font-size:12px}
+  .weekrow{gap:1px}
+  .wdlbl{font-size:9px}
+  /* Modal */
+  .modal{width:calc(100% - 24px);min-width:unset;max-width:unset}
+  /* Count items */
+  .count-val{width:42px}
+  /* Larger touch targets for resize handles */
+  .er-top,.er-bot{height:14px}
+  .evt{font-size:12px}
+}
+
 /* AUTH GATE */
 .auth-card{background:var(--sf);border:1px solid var(--bd2);border-radius:var(--r2);padding:32px 28px;width:320px;display:flex;flex-direction:column;gap:12px;align-items:center;box-shadow:0 24px 60px rgba(0,0,0,.6)}
 </style>
@@ -274,8 +304,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
       <span id="userEmail" style="font-size:10px;color:var(--t3);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
       <button class="ibtn" onclick="logout()" style="font-size:10px;padding:2px 7px">로그아웃</button>
     </div>
-    <button class="ibtn" onclick="exportJSON()" style="font-size:10px;padding:3px 8px">↓ 내보내기</button>
-    <label class="ibtn" style="font-size:10px;padding:3px 8px;cursor:pointer">↑ 가져오기<input type="file" accept=".json" style="display:none" onchange="importJSON(this)"></label>
+    <button id="hdExport" class="ibtn" onclick="exportJSON()" style="font-size:10px;padding:3px 8px">↓ 내보내기</button>
+    <label id="hdImport" class="ibtn" style="font-size:10px;padding:3px 8px;cursor:pointer">↑ 가져오기<input type="file" accept=".json" style="display:none" onchange="importJSON(this)"></label>
     <button class="ibtn" onclick="openSettings()" title="설정" style="font-size:13px;padding:3px 8px">⚙</button>
     <div class="hd-date" id="hdDate"></div>
   </div>
@@ -700,12 +730,12 @@ function renderDayView(){
       const pct=100/ev._totalCols,lp=ev._col*pct;
       const arr=type==='planned'?'→':'←';
       return `<div class="evt${isSel?' sel':''}${isAD?' alt-drag':''}" style="top:${top}px;height:${h}px;background:${bg};border-left-color:${ev.color};color:${ev.color};left:calc(${lp}% + 2px);width:calc(${pct}% - 4px)"
-        onmousedown="evtMD(event,'${ev.id}','${type}','${dStr}')">
-        <div class="er-top" onmousedown="evtTopRS(event,'${ev.id}','${type}','${dStr}')"></div>
+        onmousedown="evtMD(event,'${ev.id}','${type}','${dStr}')" ontouchstart="evtTouchStart(event,'${ev.id}','${type}','${dStr}')">
+        <div class="er-top" onmousedown="evtTopRS(event,'${ev.id}','${type}','${dStr}')" ontouchstart="evtTopTouchStart(event,'${ev.id}','${type}','${dStr}')"></div>
         <div class="et">${esc(ev.title)}</div>
         <div class="es">${fmtM(ev.startMin)}–${fmtM(ev.endMin)}</div>
         <button class="evt-copy" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();quickCopy('${ev.id}','${type}','${dStr}')">${arr}</button>
-        <div class="er-bot" onmousedown="evtBotRS(event,'${ev.id}','${type}','${dStr}')"></div>
+        <div class="er-bot" onmousedown="evtBotRS(event,'${ev.id}','${type}','${dStr}')" ontouchstart="evtBotTouchStart(event,'${ev.id}','${type}','${dStr}')"></div>
       </div>`;
     }).join('');
     if(_altDrag&&_altDrag.type===type&&_altDrag.moved){
@@ -927,6 +957,43 @@ function evtBotRS(e,id,type,dStr){
   document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
 }
 function syncRG(ev){if(!ev||!ev.routineGroupId) return;const g=S.rgroups.find(g=>g.id===ev.routineGroupId);if(!g) return;g.timeStart=fmtM(ev.startMin);g.timeEnd=fmtM(ev.endMin);}
+
+// TOUCH EVENTS — calendar event move/resize
+function evtTouchStart(e,id,type,dStr){
+  if(e.target.classList.contains('er-top')||e.target.classList.contains('er-bot')) return;
+  e.preventDefault();e.stopPropagation();
+  const t0=e.touches[0];
+  const ev=getEv(id,type,dStr);if(!ev) return;
+  const sy=t0.clientY,origS=ev.startMin,origE=ev.endMin,dur=origE-origS;
+  let moved=false;
+  const onMove=e2=>{
+    const t=e2.touches[0];const dy=t.clientY-sy;
+    if(!moved&&Math.abs(dy)>5) moved=true;
+    if(moved){const ns=Math.max(SH*60,Math.min(EH*60-dur,origS+Math.round(dy/SP)*30));ev.startMin=ns;ev.endMin=ns+dur;renderCal();}
+  };
+  const onEnd=()=>{
+    document.removeEventListener('touchmove',onMove);document.removeEventListener('touchend',onEnd);
+    if(!moved){if(selEvt&&selEvt.id===id&&selEvt.type===type){selEvt=null;openEvtModal(id,type,dStr);}else{selEvt={id,type,dStr};renderCal();}}
+    else{syncRG(ev);save();renderCal();}
+  };
+  document.addEventListener('touchmove',onMove,{passive:false});document.addEventListener('touchend',onEnd);
+}
+function evtTopTouchStart(e,id,type,dStr){
+  e.preventDefault();e.stopPropagation();
+  const ev=getEv(id,type,dStr);if(!ev) return;
+  const sy=e.touches[0].clientY,orig=ev.startMin;
+  const onMove=e2=>{ev.startMin=Math.max(SH*60,Math.min(ev.endMin-30,orig+Math.round((e2.touches[0].clientY-sy)/SP)*30));renderCal();};
+  const onEnd=()=>{syncRG(ev);save();document.removeEventListener('touchmove',onMove);document.removeEventListener('touchend',onEnd);};
+  document.addEventListener('touchmove',onMove,{passive:false});document.addEventListener('touchend',onEnd);
+}
+function evtBotTouchStart(e,id,type,dStr){
+  e.preventDefault();e.stopPropagation();
+  const ev=getEv(id,type,dStr);if(!ev) return;
+  const sy=e.touches[0].clientY,orig=ev.endMin;
+  const onMove=e2=>{ev.endMin=Math.min(EH*60,Math.max(ev.startMin+30,orig+Math.round((e2.touches[0].clientY-sy)/SP)*30));renderCal();};
+  const onEnd=()=>{syncRG(ev);save();document.removeEventListener('touchmove',onMove);document.removeEventListener('touchend',onEnd);};
+  document.addEventListener('touchmove',onMove,{passive:false});document.addEventListener('touchend',onEnd);
+}
 
 document.addEventListener('keydown',e=>{
   if((e.key==='Backspace'||e.key==='Delete')&&selEvt){
