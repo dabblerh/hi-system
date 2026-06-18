@@ -65,8 +65,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
 .cnbtn{background:transparent;border:1px solid var(--bd);color:var(--t3);border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .cnbtn:hover{border-color:var(--ac);color:var(--ac)}
 .cdsp{font-size:13px;font-weight:700;flex:1}
-.tbtn{padding:4px 10px;border-radius:5px;font-size:11px;font-family:inherit;cursor:pointer;border:1px solid var(--bd);background:transparent;color:var(--t3);transition:all .15s;font-weight:500}
-.tbtn:hover,.tbtn.on{border-color:var(--ac);color:var(--ac)}
+.tbtn{padding:4px 10px;border-radius:5px;font-size:11px;font-family:inherit;cursor:pointer;border:1px solid var(--bd);background:transparent;color:var(--t3);transition:all .15s;font-weight:500;touch-action:manipulation}
+.tbtn:hover{border-color:var(--ac);color:var(--ac)}
+.tbtn.on{border-color:var(--ac);color:var(--ac);background:var(--acbg)}
+.vbtn-grp{display:flex;gap:2px}
 .ibtn{background:none;border:1px solid var(--bd);color:var(--t3);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:500}
 .ibtn:hover{border-color:var(--ac);color:var(--ac)}
 .ca-cols{display:grid;grid-template-columns:44px 1fr 1fr;border-bottom:1px solid var(--bd);flex-shrink:0;background:var(--sf)}
@@ -128,7 +130,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
 .rdbtn{background:transparent;border:1px solid var(--bd);color:var(--t3);border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .rdbtn:hover{border-color:var(--ac);color:var(--ac)}
 .weekrow{display:flex;gap:3px;margin-bottom:10px}
-.wday{flex:1;text-align:center;cursor:pointer}
+.wday{flex:1;text-align:center;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .wdlbl{font-size:10px;color:var(--t3);margin-bottom:3px;font-weight:500}
 .rgcard{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r2);margin-bottom:7px;overflow:hidden}
 .rghd{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer}
@@ -146,7 +148,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
 .ritems{padding:0 12px 9px}
 .ri{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(46,46,52,.8)}
 .ri:last-of-type{border-bottom:none}
-.ricb{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--bd2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;background:transparent;font-size:10px;font-weight:800;color:#fff}
+.ricb{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--bd2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;background:transparent;font-size:10px;font-weight:800;color:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .ricb.done{background:var(--green);border-color:var(--green)}
 .ricb.done::after{content:'✓'}
 .riname{font-size:12px;flex:1}
@@ -254,9 +256,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
   #hdExport,#hdImport,#userInfo,.hd-date{display:none!important}
   /* Auth gate */
   .auth-card{width:calc(100% - 32px)}
-  /* Planner: hide task panel */
-  .tp{display:none}
+  /* Planner: task panel as bottom sheet */
+  .tp{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;height:80vh;width:100%;border-radius:16px 16px 0 0;border-top:1px solid var(--bd2);border-right:none;flex-direction:column;overflow:hidden}
+  .tp.open{display:flex}
+  #tpBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199}
+  #tpBackdrop.open{display:block}
+  #mTaskBtn{display:flex!important}
+  #tpCloseLine{display:flex!important}
   .ca{min-width:0;width:100%}
+  /* Calendar toolbar wraps to 2 rows */
+  .ca-hd{flex-wrap:wrap;row-gap:4px;padding:6px 10px}
   .cch-sub{display:none}
   .cch{font-size:9px;padding:5px 2px}
   .cdsp{font-size:12px}
@@ -266,6 +275,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
   .rddate{font-size:12px}
   .weekrow{gap:1px}
   .wdlbl{font-size:9px}
+  /* Larger weekday touch targets */
+  .wday{padding:4px 0;min-height:48px}
   /* Modal */
   .modal{width:calc(100% - 24px);min-width:unset;max-width:unset}
   /* Count items */
@@ -274,6 +285,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
   .er-top,.er-bot{height:14px}
   .evt{font-size:12px}
 }
+#mTaskBtn{display:none}
+#tpCloseLine{display:none;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid var(--bd);flex-shrink:0}
+#tpCloseLine span{font-size:12px;font-weight:700;color:var(--t2)}
+#tpCloseBtn{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:2px 6px;line-height:1;touch-action:manipulation}
 
 /* AUTH GATE */
 .auth-card{background:var(--sf);border:1px solid var(--bd2);border-radius:var(--r2);padding:32px 28px;width:320px;display:flex;flex-direction:column;gap:12px;align-items:center;box-shadow:0 24px 60px rgba(0,0,0,.6)}
@@ -314,7 +329,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
 <main class="main">
   <div class="tab on" id="tab-planner">
     <div class="planner">
-      <div class="tp">
+      <div class="tp" id="taskPanel">
+        <div id="tpCloseLine">
+          <span>📝 할 일 목록</span>
+          <button id="tpCloseBtn" onclick="toggleMobileTask()">✕</button>
+        </div>
         <div class="tps">
           <div class="tplbl">📝 Brain Dump</div>
           <textarea class="dump" id="dumpInput" placeholder="오늘 할 일을 모두 적어보세요&#10;줄바꿈으로 여러 개 추가"></textarea>
@@ -331,14 +350,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
           <div style="font-size:10px;color:var(--t3);text-align:center;margin-top:4px">드래그→캘린더 · ⌥=복제 · ⌫=삭제</div>
         </div>
       </div>
+      <div id="tpBackdrop" onclick="toggleMobileTask()"></div>
       <div class="ca">
         <div class="ca-hd">
           <button class="cnbtn" onclick="navDate(-1)">‹</button>
           <button class="cnbtn" onclick="navDate(1)">›</button>
           <div class="cdsp" id="cdsp"></div>
           <button class="tbtn" onclick="goToday()">오늘</button>
-          <button class="tbtn" id="viewToggle" onclick="toggleCalView()">주간</button>
+          <div class="vbtn-grp">
+            <button class="tbtn on" id="vBtnDay" onclick="setCalView('day')">일간</button>
+            <button class="tbtn" id="vBtnWeek" onclick="setCalView('week')">주간</button>
+            <button class="tbtn" id="vBtnMonth" onclick="setCalView('month')">월간</button>
+          </div>
           <div style="margin-left:auto;display:flex;gap:4px" id="addBtns">
+            <button class="ibtn" id="mTaskBtn" onclick="toggleMobileTask()">📝 할 일</button>
             <button class="ibtn" onclick="openAddEvt('planned')">+ 계획</button>
             <button class="ibtn" onclick="openAddEvt('actual')">+ 실제</button>
           </div>
@@ -852,16 +877,24 @@ function renderMonthView(){
   caGrid.innerHTML=`<div class="mv-wrap">${hdCells}${dayCells}</div>`;
 }
 
-function switchToDay(dStr){calD=new Date(dStr+'T00:00:00');calView='day';document.getElementById('viewToggle').textContent='주간';document.getElementById('viewToggle').classList.remove('on');_calInitScroll=false;renderCal();}
+function switchToDay(dStr){calD=new Date(dStr+'T00:00:00');setCalView('day');}
 
-function toggleCalView(){
-  const order=['day','week','month'];
-  calView=order[(order.indexOf(calView)+1)%3];
-  const btn=document.getElementById('viewToggle');
-  const nextLabel={day:'주간',week:'월간',month:'일간'};
-  btn.textContent=nextLabel[calView];
-  btn.classList.toggle('on',calView!=='day');
+function setCalView(v){
+  calView=v;
+  ['day','week','month'].forEach(x=>{
+    const btn=document.getElementById('vBtn'+x.charAt(0).toUpperCase()+x.slice(1));
+    if(btn) btn.classList.toggle('on',x===v);
+  });
   _calInitScroll=false;renderCal();
+}
+
+function toggleMobileTask(){
+  const panel=document.getElementById('taskPanel');
+  const backdrop=document.getElementById('tpBackdrop');
+  const open=panel.classList.toggle('open');
+  backdrop.classList.toggle('open',open);
+  if(open) document.body.style.overflow='hidden';
+  else document.body.style.overflow='';
 }
 
 function navDate(d){
