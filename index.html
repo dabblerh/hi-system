@@ -244,9 +244,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+
+/* AUTH GATE */
+.auth-card{background:var(--sf);border:1px solid var(--bd2);border-radius:var(--r2);padding:32px 28px;width:320px;display:flex;flex-direction:column;gap:12px;align-items:center;box-shadow:0 24px 60px rgba(0,0,0,.6)}
 </style>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- Auth Gate -->
+<div id="authGate" style="position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center">
+  <div class="auth-card">
+    <div style="font-size:16px;font-weight:900;letter-spacing:.3em;color:var(--t3);margin-bottom:4px"><span style="color:var(--ac);letter-spacing:.1em">HI</span> SYSTEM</div>
+    <div id="authMsg" style="font-size:12px;color:var(--t3);text-align:center;line-height:1.5">이메일로 로그인 링크를 받아요</div>
+    <input id="authEmail" type="email" class="minp" style="width:100%;margin:0" placeholder="이메일 주소 입력">
+    <button id="authSendBtn" class="abtn" style="width:100%;margin:0" onclick="sendMagicLink()">로그인 링크 받기</button>
+    <div style="font-size:10px;color:var(--t3);text-align:center">로그인 없이 쓰려면 <button onclick="skipAuth()" style="background:none;border:none;color:var(--ac);cursor:pointer;font-size:10px;font-family:inherit;padding:0">로컬 모드</button></div>
+  </div>
+</div>
 
 <header class="hd">
   <div class="logo"><em>HI</em> SYSTEM</div>
@@ -255,6 +270,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Ne
     <button class="nbtn" data-tab="routine" onclick="switchTab('routine')">Routine</button>
   </nav>
   <div style="margin-left:auto;display:flex;gap:5px;align-items:center">
+    <div id="userInfo" style="display:none;align-items:center;gap:5px;padding-right:8px;border-right:1px solid var(--bd);margin-right:3px">
+      <span id="userEmail" style="font-size:10px;color:var(--t3);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button class="ibtn" onclick="logout()" style="font-size:10px;padding:2px 7px">로그아웃</button>
+    </div>
     <button class="ibtn" onclick="exportJSON()" style="font-size:10px;padding:3px 8px">↓ 내보내기</button>
     <label class="ibtn" style="font-size:10px;padding:3px 8px;cursor:pointer">↑ 가져오기<input type="file" accept=".json" style="display:none" onchange="importJSON(this)"></label>
     <button class="ibtn" onclick="openSettings()" title="설정" style="font-size:13px;padding:3px 8px">⚙</button>
@@ -500,7 +519,21 @@ function loadState(){
 let S=loadState();
 let _id=Date.now();
 function nid(){return `x${_id++}`;}
-function save(){try{localStorage.setItem('hi-v4',JSON.stringify(S));}catch(e){}}
+
+const SUPA_URL='https://zlzslivoptfjdjmfxtsl.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsenNsaXZvcHRmamRqbWZ4dHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODEwOTgsImV4cCI6MjA5NzM1NzA5OH0._WFMaZW3m6Ew1gEKrqrE-oeHSCzbbNIWNeM4Q1dgpq4';
+const sb=(typeof supabase!=='undefined')?supabase.createClient(SUPA_URL,SUPA_KEY):null;
+let currentUser=null,_saveTimer=null;
+
+function save(){
+  try{localStorage.setItem('hi-v4',JSON.stringify(S));}catch(e){}
+  if(currentUser&&sb){
+    clearTimeout(_saveTimer);
+    _saveTimer=setTimeout(async()=>{
+      try{await sb.from('hi_data').upsert({user_id:currentUser.id,data:S,updated_at:new Date().toISOString()});}catch(e){}
+    },1000);
+  }
+}
 
 let calD=new Date(), rdD=new Date(), calView='day';
 function ds(d){return d.toISOString().split('T')[0];}
@@ -1291,6 +1324,48 @@ function importJSON(input){
   input.value='';
 }
 
+// SUPABASE AUTH
+async function loadFromSupabase(){
+  if(!currentUser||!sb) return;
+  try{
+    const{data}=await sb.from('hi_data').select('data').eq('user_id',currentUser.id).single();
+    if(data?.data){
+      const r=data.data;
+      if(!r.settings) r.settings={weekStart:0};
+      S=r;
+      try{localStorage.setItem('hi-v4',JSON.stringify(S));}catch(e){}
+      renderTasks();renderPrios();renderCal();renderRoutineAll();
+    }
+  }catch(e){}
+}
+async function sendMagicLink(){
+  const email=document.getElementById('authEmail').value.trim();
+  if(!email||!sb) return;
+  const msgEl=document.getElementById('authMsg');
+  msgEl.textContent='전송 중...';msgEl.style.color='var(--t3)';
+  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:'https://dabblerh.github.io/hi-system/'}});
+  if(error){
+    msgEl.textContent='오류: '+error.message;msgEl.style.color='var(--red)';
+  } else {
+    msgEl.textContent='✓ 이메일을 확인해주세요! 링크를 클릭하면 로그인돼요.';msgEl.style.color='var(--green)';
+    document.getElementById('authEmail').style.display='none';
+    document.getElementById('authSendBtn').style.display='none';
+  }
+}
+function skipAuth(){document.getElementById('authGate').style.display='none';}
+async function logout(){
+  if(sb) await sb.auth.signOut();
+  currentUser=null;
+  const g=document.getElementById('authGate');
+  g.style.display='flex';
+  document.getElementById('userInfo').style.display='none';
+  document.getElementById('authEmail').style.display='';
+  document.getElementById('authSendBtn').style.display='';
+  document.getElementById('authMsg').textContent='이메일로 로그인 링크를 받아요';
+  document.getElementById('authMsg').style.color='var(--t3)';
+  document.getElementById('authEmail').value='';
+}
+
 // UTILS
 function esc(s){const d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
 
@@ -1305,6 +1380,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dumpInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();setTimeout(addTasks,0);}});
   document.getElementById('promptInput').addEventListener('keydown',e=>{if(e.key==='Enter')confirmPrompt();if(e.key==='Escape')closePrompt();});
   document.getElementById('aiName').addEventListener('keydown',e=>{if(e.key==='Enter')confirmAddItem();if(e.key==='Escape')closeAddItemModal();});
+  document.getElementById('authEmail').addEventListener('keydown',e=>{if(e.key==='Enter')sendMagicLink();});
   document.getElementById('caScroll').addEventListener('mousedown',e=>{if(!e.target.closest('.evt')&&selEvt){selEvt=null;renderCal();}});
 
   document.addEventListener('keydown',e=>{
@@ -1316,6 +1392,25 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(!document.getElementById('settingsModal').classList.contains('hidden')) closeSettings();
     }
   });
+
+  // Supabase auth init
+  if(sb){
+    sb.auth.onAuthStateChange(async(event,session)=>{
+      if(session?.user){
+        currentUser=session.user;
+        document.getElementById('authGate').style.display='none';
+        document.getElementById('userInfo').style.display='flex';
+        document.getElementById('userEmail').textContent=currentUser.email;
+        if(event==='SIGNED_IN'||event==='INITIAL_SESSION') await loadFromSupabase();
+      } else {
+        currentUser=null;
+        document.getElementById('authGate').style.display='flex';
+        document.getElementById('userInfo').style.display='none';
+      }
+    });
+  } else {
+    document.getElementById('authGate').style.display='none';
+  }
 
   renderTasks();renderPrios();renderCal();renderRoutineAll();
   setInterval(()=>{if(document.getElementById('tab-planner').classList.contains('on')&&isToday(calD)) renderCal();},60000);
