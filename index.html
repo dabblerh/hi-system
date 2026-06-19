@@ -1565,7 +1565,7 @@ async function sendOtp(){
   if(!email){msgEl.textContent='이메일을 입력해주세요';msgEl.style.color='var(--red)';return;}
   if(!sb){msgEl.textContent='Supabase 미연결 — 로컬 모드만 가능';msgEl.style.color='var(--amber)';return;}
   msgEl.textContent='전송 중...';msgEl.style.color='var(--t3)';
-  const{error}=await sb.auth.signInWithOtp({email});
+  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:'https://dabblerh.github.io/hi-system/'}});
   if(error){
     msgEl.textContent='오류: '+error.message;msgEl.style.color='var(--red)';
   } else {
